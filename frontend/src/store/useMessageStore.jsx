@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { toast } from 'react-toastify';
 import useAuthStore from './useAuthStore';
+const { VITE_BACKEND_URL } = import.meta.env;
+
 
 
 
@@ -19,7 +21,7 @@ const useMessageStore = create((set, get) => {
     getMessages: (loggedInUserId, selectedUserId) => {
       try {
 
-        fetch("http://localhost:5000/messageRoutes/getMessages", {
+        fetch(`${VITE_BACKEND_URL}/messageRoutes/getMessages`, {
           method: 'POST',
           credentials: 'include',
           headers: {
@@ -45,10 +47,11 @@ const useMessageStore = create((set, get) => {
 
     sendMessage: (senderId, receiverId, text) => {
       set({isSendingMessage:true})
-      const {base64Images} = get()
+      const base64Images = get().base64Images
+      set({base64Images:[]})
       try {
-        if (senderId && receiverId && text != '') {
-          fetch("http://localhost:5000/messageRoutes/sendMessage", {
+        if (senderId && receiverId ) {
+          fetch(`${VITE_BACKEND_URL}/messageRoutes/sendMessage`, {
             method: 'POST',
             credentials: 'include',
             headers: {
@@ -84,7 +87,7 @@ const useMessageStore = create((set, get) => {
     searchUsers: (email) => {
 
       try {
-        fetch("http://localhost:5000/messageRoutes/searchUsers", {
+        fetch(`${VITE_BACKEND_URL}/messageRoutes/searchUsers`, {
           method: 'POST',
           credentials: 'include',
           headers: {
@@ -116,7 +119,7 @@ const useMessageStore = create((set, get) => {
     getSelectedUser: (_id)=>{
       try {
 
-        fetch("http://localhost:5000/messageRoutes/getUser", {
+        fetch(`${VITE_BACKEND_URL}/messageRoutes/getUser`, {
           method: 'POST',
           credentials: 'include',
           headers: {
@@ -144,7 +147,7 @@ const useMessageStore = create((set, get) => {
 
         try {
 
-          fetch("http://localhost:5000/messageRoutes/getUser", {
+          fetch(`${VITE_BACKEND_URL}/messageRoutes/getUser`, {
             method: 'POST',
             credentials: 'include',
             headers: {
@@ -199,7 +202,7 @@ const useMessageStore = create((set, get) => {
 
       chatToUpdate.lastMessage = text
       chatToUpdate.lastMessageTime = new Date()
-      chatToUpdate.image = base64Images[0]
+      chatToUpdate.image = ''
 
 
       set({ recentChats: [chatToUpdate, ...recentChats] })
@@ -212,19 +215,35 @@ const useMessageStore = create((set, get) => {
 
     listenToMessages: () => {
       const socket = useAuthStore.getState().socket;
+      const loggedInUser = useAuthStore.getState().loggedInUser
 
       if (socket && socket.connected) {
 
         socket.on('newMessage', (message) => {
+
+        //  const {messages} = get()
+
+        //  const messageIndex = messages.findIndex((msg)=>{
+        //   return msg._id.toString() === message.toString()
+        //  })
+
+        //  if(messageIndex != -1)
+        //  {
+        //    messages.splice(messageIndex,1)
+        //    set({messages:[...messages,message]})
+        //  }
+          
+
+       
           if (get().selectedUser && get().selectedUser._id == message.senderId) {
             set({ messages: [...get().messages, message] })
             socket.emit('deliveredAndSeen', message._id)
           }
           else
-          {
+          { 
             socket.emit('delivered', message._id)
           }
-          get().updateRecentChats(message.senderId, message.text, message.image)
+          get().updateRecentChats(message.senderId, message.text, message.images[0])
           
         })
 
@@ -337,33 +356,53 @@ const useMessageStore = create((set, get) => {
       return formattedTime
     },
 
-    convertImagesToBase64Urls: (e)=>{
-      set({isImagesConverting:true})
+    convertImagesToBase64Urls: (e) => {
+      set({ isImagesConverting: true });
+    
       const selectedImages = e.target.files;
-      const selectedImagesArray = Array.from(selectedImages);  // Convert FileList to array
-      
-      const imagePromises = selectedImagesArray.map((image) => {
+      const selectedImagesArray = Array.from(selectedImages); // Convert FileList to array
+    
+      const imagePromises = selectedImagesArray.map((image, index) => {
         return new Promise((resolve, reject) => {
           const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);  // Resolve with Base64 string
-          reader.onerror = reject;  // Reject in case of error
-          reader.readAsDataURL(image);  // Read image as Base64 string
+    
+          // Setup reader to handle successful read and error handling
+          reader.onloadend = () => {
+            // Log the resulting base64 string for debugging
+            const base64String = reader.result;
+    
+            // Ensure the base64 string is properly formatted
+            if (base64String && base64String.startsWith('data:image')) {
+              resolve(base64String);  // Resolve with base64 string
+            } else {
+              reject('Invalid base64 format');  // Reject if the string is malformed
+            }
+          };
+    
+          reader.onerror = (error) => {
+            reject(error);  // Reject on error
+          };
+    
+          // Start reading the image as a base64 string
+          reader.readAsDataURL(image);
         });
       });
     
-      
+      // Wait for all images to be converted to base64
       Promise.all(imagePromises)
         .then((base64Images) => {
-         set({base64Images:base64Images})
-         set({isImagesConverting:false})
+          // Set the converted base64 images to the state
+          set({ base64Images: base64Images });
+          set({ isImagesConverting: false });
         })
         .catch((error) => {
-          console.error("Error converting images to Base64", error);
-          toast.error("Error converting images to Base64", error)
-          set({isImagesConverting:false})
+          // Handle any errors
+          console.error('Error converting images to Base64:', error);
+          toast.error('Error converting images to Base64');
+          set({ isImagesConverting: false });
         });
-
     },
+    
   }
 })
 

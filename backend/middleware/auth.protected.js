@@ -17,7 +17,6 @@ export const authProtector = async (req, res, next) => {
         if (!user) {return res.status(400).json({ error: 'cannot find user. something went wrong' }) }
 
         res.user=user
-
         next()
 
     } catch (error) {

@@ -2,6 +2,8 @@ import { toast } from 'react-toastify';
 import {create} from 'zustand';
 import {io} from 'socket.io-client'
 import useMessageStore from './useMessageStore';
+const { VITE_BACKEND_URL } = import.meta.env;
+
 
 
 const useAuthStore = create((set, get) => {
@@ -19,7 +21,7 @@ const useAuthStore = create((set, get) => {
     signup:(name, surname, email, password, navigate)=>{
         try {
           set({ isSigningUp: true }); 
-            fetch("http://localhost:5000/authRoutes/sighup", {
+            fetch(`${VITE_BACKEND_URL}/authRoutes/sighup`, {
                 method:'POST',
                 credentials: 'include',
                 headers: {
@@ -55,7 +57,7 @@ const useAuthStore = create((set, get) => {
     login:(gmail, password, navigate)=>{
       const setRecentChats = useMessageStore.getState().setRecentChats
         set({ isLoggingIn: true }); 
-        fetch("http://localhost:5000/authRoutes/login", {
+        fetch(`${VITE_BACKEND_URL}/authRoutes/login`, {
             method: 'POST',
             credentials: 'include',
             headers: {
@@ -90,7 +92,7 @@ const useAuthStore = create((set, get) => {
     },
 
     logout:(navigate)=>{
-      fetch("http://localhost:5000/authRoutes/logout", {
+      fetch(`${VITE_BACKEND_URL}/authRoutes/logout`, {
         method:'POST',
         headers: {
           'Content-Type': 'application/json', 
@@ -111,7 +113,7 @@ const useAuthStore = create((set, get) => {
 
     updateProfile:(url)=>{
       try {
-          fetch("http://localhost:5000/authRoutes/updateProfile", {
+          fetch(`${VITE_BACKEND_URL}/authRoutes/updateProfile`, {
               method:'POST',
               credentials: 'include',
               headers: {
@@ -142,7 +144,7 @@ const useAuthStore = create((set, get) => {
 
           try {
 
-            fetch('http://localhost:5000/authRoutes/check', {
+            fetch(`${VITE_BACKEND_URL}/authRoutes/check`, {
               method: 'POST',
               credentials: 'include',
             })
@@ -176,7 +178,7 @@ const useAuthStore = create((set, get) => {
       if( socket && socket.connected && loggedInUser){return}
 
 
-      const newSocket = io('http://localhost:5000', {
+      const newSocket = io(`${VITE_BACKEND_URL}`, {
         query:{_id:loggedInUser._id}
       })
 

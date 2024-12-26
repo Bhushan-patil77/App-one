@@ -22,28 +22,6 @@ function App() {
     check(navigate)
   }, [])
 
-  const handleLogout = () => {
-
-
-
-  }
-
-  const handleGetUsers = () => {
-    try {
-
-      fetch('http://localhost:5000/authRoutes/getUsers', {
-        method: 'POST',
-        credentials: 'include',
-      })
-        .then((response) => { return response.json() })
-        .then((data) => {
-          if (data.error) { navigate('/login') }
-        })
-
-    } catch (e) {
-
-    }
-  }
 
 
 

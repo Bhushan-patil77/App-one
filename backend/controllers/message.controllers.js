@@ -4,26 +4,23 @@ import Message from "../models/messageModel.js"
 import User from "../models/userModel.js"
 
 const uploadImagesToCloudinary = async (base64Images) => {
+
   try {
     const uploadPromises = base64Images.map((base64Image) => {
       return new Promise((resolve, reject) => {
-        cloudinary.uploader.upload(
-          base64Image, // This should be a base64 string (with data URL format like 'data:image/jpeg;base64,...')
-          { resource_type: 'auto' }, // Automatically detect resource type (image, video, etc.)
-          (error, result) => {
-            if (error) {
-              reject(error);
-            } else {
-              resolve(result.secure_url); // This is the secure URL after upload
-            }
-          }
+        cloudinary.uploader.upload( base64Image, {resource_type: 'auto'}, (error, result) => {
+                                                                                                  if (error) {
+                                                                                                    reject(error);
+                                                                                                  } else {
+                                                                                                    resolve(result.secure_url); 
+                                                                                                  }
+                                                                                                }
         );
       });
     });
 
     // Wait for all uploads to finish
     const secureUrls = await Promise.all(uploadPromises);
-    console.log(secureUrls); // An array of secure URLs for the uploaded images
 
     return secureUrls; // Returning the array of secure URLs
   } catch (error) {
@@ -35,19 +32,6 @@ const uploadImagesToCloudinary = async (base64Images) => {
 
 export const sendMessage = async (req, res) =>{
    const {senderId, receiverId, text, base64Images } = req.body
-
-  //  if(base64Images.length > 0)
-  //  {
-  //   const message = new Message({
-  //     senderId:senderId,
-  //     receiverId:receiverId,
-  //     text:text,
-  //     images:base64Images
-  //    })
-
-  //    res.status(200).json({success:'Message sent', savedMessage:message})
-  //  }
-
    uploadImagesToCloudinary(base64Images)
   .then(async (secureUrls) => {
 

@@ -6,6 +6,8 @@ import chatImage from '../assets/chatImage.jpg'
 
 import { Link, useNavigate } from 'react-router-dom'
 import useMessageStore from '../store/useMessageStore'
+const { VITE_BACKEND_URL } = import.meta.env;
+
 
 let typingTimer = null; 
 
@@ -19,6 +21,8 @@ function Home() {
   const { sendMessage, getMessages, convertImagesToBase64Urls, isImagesConverting, emitTyping, emitNotTyping, usersTyping, messages, searchUsers, users, setUsers, setSelectedUser, selectedUser, getSelectedUser, listenToMessages, dontListenToMessages, recentChats, emitSeen } = useMessageStore()
   const navigate = useNavigate()
   const scrollPan = document.getElementById('scrollPan');
+  const imageInputRef = useRef(null)
+
 
   useEffect(()=>{                                                                          //scrolling messages to end when messages object
     if (scrollPan) {
@@ -95,6 +99,10 @@ function Home() {
         emitNotTyping()
       }, 2000);  
   };
+
+  const handleButtonClick = () =>{
+    
+  }
 
  
   
@@ -264,17 +272,17 @@ function Home() {
               if (e.key === "Enter" && message.trim() !== "") {
                 e.preventDefault();
                 sendMessage(loggedInUser._id, selectedUser._id, message, image);
-
                 setMessage('');
-                setPreviewImages([])
+                setPreviewImages([]);
+                imageInputRef.current.value=''
               }
             }}
 
           />
 
-          <input id='imageInput' className='hidden' type="file" accept='image/*' onChange={(e)=>{convertImagesToBase64Urls(e); setPreviewImages(Array.from(e.target.files))}} multiple />
+          <input ref={imageInputRef} id='imageInput' className='hidden' type="file" accept='image/*' onChange={(e)=>{convertImagesToBase64Urls(e); setPreviewImages(Array.from(e.target.files))}} multiple />
           <label htmlFor="imageInput" className=' flex justify-center items-center  p-1 bg-gray-700 cursor-pointer'><MdAttachment className='w-[30px] h-[20px] text-white'/></label>
-          <button className={` text-white p-2 rounded-r-lg hover:bg-blue-600 ${isImagesConverting ? 'cursor-not-allowed disabled bg-slate-400' : 'bg-blue-500'}`} onClick={() => {  sendMessage(loggedInUser._id, selectedUser._id, message); setMessage(''); setPreviewImages([]) }}>Send</button>
+          <button className={` text-white p-2 rounded-r-lg hover:bg-blue-600 ${isImagesConverting ? 'cursor-not-allowed disabled bg-slate-400' : 'bg-blue-500'}`} onClick={() => {  sendMessage(loggedInUser._id, selectedUser._id, message); setMessage(''); setPreviewImages([]); imageInputRef.current.value = ''; }}>Send</button>
         </div>
       </div>
     }
