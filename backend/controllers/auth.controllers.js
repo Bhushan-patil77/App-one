@@ -28,7 +28,13 @@ export const sighup = async (req, res)=>{
 
         const token =  generateToken({email:email})
         
-        res.cookie('token', token , {maxAge:1*60*60*1000});
+        res.cookie('token', token, {
+            httpOnly: true, // Makes the cookie inaccessible via JavaScript
+            secure: process.env.NODE_ENV === 'production', // Set to true for production (HTTPS)
+            sameSite: 'None', // Required for cross-site cookies (if you're using cross-origin requests)
+            maxAge: 60 * 60 * 1000, // Set cookie expiration (e.g., 1 hour)
+          });
+          
 
         const createdUserWithoutPassword = createdUser.toObject();
         delete createdUserWithoutPassword.password;
@@ -59,7 +65,12 @@ export const login = async (req, res)=>{
 
         const token =  generateToken({email:email}) 
         
-        res.cookie('token', token , {maxAge:1*60*60*1000});
+        res.cookie('token', token, {
+            httpOnly: true, // Makes the cookie inaccessible via JavaScript
+            secure: process.env.NODE_ENV === 'production', // Set to true for production (HTTPS)
+            sameSite: 'None', // Required for cross-site cookies (if you're using cross-origin requests)
+            maxAge: 60 * 60 * 1000, // Set cookie expiration (e.g., 1 hour)
+          });
 
         const existingUserWithoutPassword = existingUser.toObject();
         delete existingUserWithoutPassword.password;
