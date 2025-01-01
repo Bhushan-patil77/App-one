@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { toast } from 'react-toastify';
 import useAuthStore from './useAuthStore';
 import useCloudinaryStore from './useCloudinaryStore';
+import messageReceivedSound from '../assets/messageReceivedSound.mp3'
+import messageSentSound from '../assets/messageSentSound.mp3'
 const { VITE_BACKEND_URL } = import.meta.env;
 
 
@@ -107,11 +109,14 @@ const useMessageStore = create((set, get) => {
             .then((data) => {
               if (data.error) { return toast.error(data.error) }
               if (data.success) {
+                const messageSentAudio = new Audio(messageSentSound);
+                messageSentAudio.play()
                 const { messages } = get()
                 set({ messages: [...messages, data.savedMessage] })
                 set({isSendingMessage:false})
                 setUploadedUrls([])
                 get().updateRecentChats(receiverId, text, imageUrls)
+              
                 return toast.success('message sent')
               }
             })
@@ -260,6 +265,8 @@ const useMessageStore = create((set, get) => {
 
         socket.on('newMessage', (message) => {
          const {messages} = get()
+         const messageReceivedAudio = new Audio(messageReceivedSound);
+         messageReceivedAudio.play()
 
        
           if (get().selectedUser && get().selectedUser._id == message.senderId) {
@@ -271,6 +278,8 @@ const useMessageStore = create((set, get) => {
             socket.emit('delivered', message._id)
           }
           get().updateRecentChats(message.senderId, message.text, message.images[0])
+
+          
           
         })
 
