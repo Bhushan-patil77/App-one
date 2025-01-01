@@ -1,6 +1,6 @@
 import cloudinary from "../lib/cloudinary.js";
 import { getReceiverSocketId, io, undeliveredMsgsQueue } from "../lib/socket.js"
-import Message from "../models/messageModel.js"
+import Message from "../models/messageModel.js" 
 import User from "../models/userModel.js"   
 
 const uploadImagesToCloudinary = async (base64Images,senderId, receiverId) => {
@@ -339,20 +339,22 @@ export const sendMessage = async (req, res) =>{
 } 
 
 export const sendMessageWithUploadedImages = async (req, res) =>{
-  const {senderId, receiverId, text, imageUrls } = req.body
+  const {senderId, receiverId, text, images, messageId } = req.body
   
       
    const message2 = new Message({
      senderId:senderId,
      receiverId:receiverId,
      text:text,
-     images:imageUrls
-    })  
+     images:images, 
+     messageId:messageId
+
+    })   
     
     const savedMessage = await message2.save()
-
+  
     
-    if(savedMessage?._id){
+    if(savedMessage?._id){ 
 
      const sender = await User.findById(senderId);
      const receiver = await User.findById(receiverId);

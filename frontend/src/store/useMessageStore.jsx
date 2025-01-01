@@ -96,9 +96,17 @@ const useMessageStore = create((set, get) => {
         senderId:senderId,
         receiverId:receiverId,
         text:text,
-        images:imageUrls
+        images:imageUrls,
+        delivered:false,
+        seen:false,
+        createdAt:new Date(),
+        updatedAt:new Date(),
+        messageId: get().generateId()
       }
+
       set({ messages: [...messages, msg ] })
+      const messageSentAudio = new Audio(messageSentSound);
+      messageSentAudio.play()
 
       try {
         if (senderId && receiverId && (text != '' || imageUrls.length != 0) ) {
@@ -109,20 +117,27 @@ const useMessageStore = create((set, get) => {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              senderId: senderId,
-              receiverId: receiverId,
-              text: text,
-              imageUrls: imageUrls
+              senderId: msg.senderId,
+              receiverId: msg.receiverId,
+              text: msg.text,
+              images: msg.images,
+              messageId:msg.messageId
             })
           })
             .then((response) => { return response.json() })
             .then((data) => {
               if (data.error) { return toast.error(data.error) }
               if (data.success) {
-                const messageSentAudio = new Audio(messageSentSound);
-                messageSentAudio.play()
+                
                 const { messages } = get()
-                set({ messages: [...messages, data.savedMessage] })
+                const updatedMessages = messages.map((message)=>{
+                  if(message.messageId === msg.messageId)
+                  {
+                    return {...message, _id:data.savedMessage._id, delivered:data.savedMessage.delivered, seen:data.savedMessage.seen}
+                  }
+                  return message
+                })
+                set({ messages: updatedMessages })
                 set({isSendingMessage:false})
                 setUploadedUrls([])
                 get().updateRecentChats(receiverId, text, imageUrls)
@@ -275,8 +290,8 @@ const useMessageStore = create((set, get) => {
 
         socket.on('newMessage', (message) => {
          const {messages} = get()
-         const messageReceivedAudio = new Audio(messageReceivedSound);
-         messageReceivedAudio.play()
+        //  const messageReceivedAudio = new Audio(messageReceivedSound);
+        //  messageReceivedAudio.play()
 
        
           if (get().selectedUser && get().selectedUser._id == message.senderId) {
@@ -462,6 +477,16 @@ const useMessageStore = create((set, get) => {
           set({ isImagesConverting: false });
         });
     },
+
+    generateId: (length = 10) =>{
+      const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      let randomId = '';
+      for (let i = 0; i < length; i++) {
+        const randomIndex = Math.floor(Math.random() * characters.length);
+        randomId += characters[randomIndex];
+      }
+      return randomId;
+    }
     
   }
 })

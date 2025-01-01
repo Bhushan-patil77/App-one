@@ -23,7 +23,7 @@ function Home() {
   const { logout, check, loggedInUser, onlineUsers, socket } = useAuthStore()
   const { sendMessage, sendMessageWithUploadedImages, getMessages, convertImagesToBase64Urls, isImagesConverting, base64Images, emitTyping, emitNotTyping, usersTyping, messages, searchUsers, users, setUsers, setSelectedUser, selectedUser, getSelectedUser, listenToMessages, dontListenToMessages, recentChats, emitSeen } = useMessageStore()
   const navigate = useNavigate()
-  const scrollPan = document.getElementById('scrollPan');
+  const scrollSpan = document.getElementById('scrollSpan');
   const imageInputRef = useRef(null)
   const textInputRef = useRef(null)
 
@@ -34,9 +34,10 @@ function Home() {
   }, [uploadedUrls, loading, error, numberOfFileSelected])
 
   useEffect(() => {                                                                          //scrolling messages to end when messages object
-    if (scrollPan) {
-      scrollPan.scrollIntoView({ behavior: 'smooth' });
+    if (scrollSpan) {
+      scrollSpan.scrollIntoView({ behavior: 'smooth', block:'end' });
     }
+    console.log(messages)
   }, [messages])
 
   useEffect(() => {                                                                          // observing all unSeen messages elements to deliver seen report
@@ -216,7 +217,7 @@ function Home() {
                         <div className='flex justify-end'>
                           <div className="bg-gray-800  text-white p-3 rounded-lg max-w-[400px] flex flex-col">
                             {
-                              message.images.length > 0 && <div className='flex flex-wrap justify-start gap-2 mb-2 '>
+                              message.images?.length > 0 && <div className='flex flex-wrap justify-start gap-2 mb-2 '>
                                 {
                                   message.images.map((image, i) => {
                                     return <img key={i} className='w-[175px] h- object-cover rounded-md' src={image} alt="" />
@@ -227,7 +228,7 @@ function Home() {
                             <p className="text-sm break-words text-wrap text-start">{message.text}</p>
                           </div>
                         </div>
-                        <span className="text-xs  text-gray-400  flex justify-end gap-3 pt-1 pr-2">{messageTime} {!message.delivered && !message.seen ? <span className='inline-block text-xl text-white checkmark'><BiCheck /></span> : ''} {message.delivered && !message.seen ? <span className='inline-block text-xl text-white checkmark'><BiCheckDouble /></span> : ''} {message.delivered && message.seen ? <span className='inline-block text-green-600 text-xl checkmark'><BiCheckDouble /></span> : ''} </span>
+                        <span className="text-xs  text-gray-400  flex justify-end items-center gap-3 min-h-[30px] pr-2 "> <span>{messageTime}</span> {!message.delivered && !message.seen ? <span className='inline-block text-xl text-white checkmark '><BiCheck /></span> : ''} {message.delivered && !message.seen ? <span className='inline-block text-xl text-white checkmark '><BiCheckDouble /></span> : ''} {message.delivered && message.seen ? <span className='inline-block text-green-600 text-xl checkmark '><BiCheckDouble /></span> : ''} </span>
 
                       </div>
                     }
@@ -255,7 +256,7 @@ function Home() {
 
                 }
 
-                <span id='scrollPan' className=''></span>
+                <span id='scrollSpan' className=''></span>
 
               </div>
             }
