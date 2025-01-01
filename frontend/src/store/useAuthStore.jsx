@@ -2,6 +2,7 @@ import { toast } from 'react-toastify';
 import {create} from 'zustand';
 import {io} from 'socket.io-client'
 import useMessageStore from './useMessageStore';
+import { useNavigate } from 'react-router-dom';
 const { VITE_BACKEND_URL } = import.meta.env;
 
 
@@ -13,6 +14,7 @@ const useAuthStore = create((set, get) => {
     isLoggingIn:false,
     isLoggedIn:false,
     loggedInUser:null,
+    isUpdatingProfile:false,
     socket:null,
     recentChats:[],
     onlineUsers:[],
@@ -111,7 +113,9 @@ const useAuthStore = create((set, get) => {
          })
     },
 
-    updateProfile:(url)=>{
+    updateProfile:(url, navigate)=>{
+      if(!url){return toast.error('Please select profile image first')}
+      set({isUpdatingProfile:true})
       try {
           fetch(`${VITE_BACKEND_URL}/authRoutes/updateProfile`, {
               method:'POST',
@@ -127,15 +131,16 @@ const useAuthStore = create((set, get) => {
               console.log(data)
               if(data.error){return toast.error(data.error)}
               if(data.success){
-                 console.log('uploaded successfully')
+                set({isUpdatingProfile:false})
+                 get().socket.emit('profileUpdate', data.updatedUser)
                  navigate('/')
-                return toast.success(data.success)
+                 return toast.success(data.success)
             }
             })
           
       } catch (error) {
-          set({isSigningUp:false})
-          toast.error('Something went wrong while signing up')
+          set({isUpdatingProfile:false})
+          toast.error('Something went wrong while updating profile')
       }
     },
 

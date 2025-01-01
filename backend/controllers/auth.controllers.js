@@ -97,14 +97,23 @@ export const updateProfile = async (req, res)=>{
        const profileImageUrl = uploadedToCloudinary.secure_url
 
        if(profileImageUrl){
-        await User.findByIdAndUpdate({_id:userId}, {$set:{profileImage:profileImageUrl}})
-        return res.status(200).json({success:'profile photo uploaded successfully'})
+        const updatedUser = await User.findByIdAndUpdate({_id:userId}, {$set:{profileImage:profileImageUrl}}, {new:true})
+        updateEverywhere(updatedUser)
+        return res.status(200).json({success:'profile photo uploaded successfully', updatedUser:updatedUser})
         }
     }
      catch (error) {
         return res.status(500).json({error:'something went wrong while uploading profile photo', error})
     }
 }
+
+const updateEverywhere = async (updatedUser) => {
+    // await User.updateMany(
+    //   { 'recentChats._id': updatedUser._id }, 
+    //   { $set: { 'recentChats.$.profileImage': updatedUser.profileImage } }
+    // );
+  };
+  
 
 export const logout = (req, res)=>{
     try {

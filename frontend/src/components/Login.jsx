@@ -51,3 +51,12 @@ function Login() {
 }
 
 export default Login
+
+
+
+
+
+
+
+
+{/* <input ref={imageInputRef} id='imageInput' className='hidden' type="file" accept='image/*' onChange={(e)=>{convertImagesToBase64Urls(e); setPreviewImages(Array.from(e.target.files))}} multiple /> */}

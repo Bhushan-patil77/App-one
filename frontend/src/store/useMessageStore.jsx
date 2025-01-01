@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { toast } from 'react-toastify';
 import useAuthStore from './useAuthStore';
+import useCloudinaryStore from './useCloudinaryStore';
 const { VITE_BACKEND_URL } = import.meta.env;
 
 
@@ -45,12 +46,11 @@ const useMessageStore = create((set, get) => {
       }
     },
 
-    sendMessage: (senderId, receiverId, text) => {
+    sendMessage: (senderId, receiverId, text, base64Images) => {
       set({isSendingMessage:true})
-      const base64Images = get().base64Images
       set({base64Images:[]})
       try {
-        if (senderId && receiverId ) {
+        if (senderId && receiverId && (text != '' || base64Images.length != 0) ) {
           fetch(`${VITE_BACKEND_URL}/messageRoutes/sendMessage`, {
             method: 'POST',
             credentials: 'include',
@@ -78,6 +78,45 @@ const useMessageStore = create((set, get) => {
             })
         }
 
+      } catch (e) {
+           set({isSendingMessage:false})
+           toast.error('Error sending message ')
+      }
+    },
+
+    sendMessageWithUploadedImages: (senderId, receiverId, text, imageUrls) => {
+      set({isSendingMessage:true})
+      const {setUploadedUrls} = useCloudinaryStore.getState()
+
+      try {
+        if (senderId && receiverId && (text != '' || imageUrls.length != 0) ) {
+          fetch(`${VITE_BACKEND_URL}/messageRoutes/sendMessageWithUploadedImages`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              senderId: senderId,
+              receiverId: receiverId,
+              text: text,
+              imageUrls: imageUrls
+            })
+          })
+            .then((response) => { return response.json() })
+            .then((data) => {
+              if (data.error) { return toast.error(data.error) }
+              if (data.success) {
+                const { messages } = get()
+                set({ messages: [...messages, data.savedMessage] })
+                set({isSendingMessage:false})
+                setUploadedUrls([])
+                get().updateRecentChats(receiverId, text, imageUrls)
+                return toast.success('message sent')
+              }
+            })
+        }
+ 
       } catch (e) {
            set({isSendingMessage:false})
            toast.error('Error sending message ')
@@ -220,19 +259,7 @@ const useMessageStore = create((set, get) => {
       if (socket && socket.connected) {
 
         socket.on('newMessage', (message) => {
-
-        //  const {messages} = get()
-
-        //  const messageIndex = messages.findIndex((msg)=>{
-        //   return msg._id.toString() === message.toString()
-        //  })
-
-        //  if(messageIndex != -1)
-        //  {
-        //    messages.splice(messageIndex,1)
-        //    set({messages:[...messages,message]})
-        //  }
-          
+         const {messages} = get()
 
        
           if (get().selectedUser && get().selectedUser._id == message.senderId) {
@@ -308,6 +335,20 @@ const useMessageStore = create((set, get) => {
           })
 
           set({messages:updatedMessages})
+        })
+
+        socket.on('profileUpdate', (updatedUser)=>{
+          const prevRecentChats = get().recentChats
+
+          const updatedRecentChats = prevRecentChats.map((prevRecentChat)=>{
+            if(prevRecentChat._id === updatedUser._id)
+            {
+              return {...prevRecentChat, profileImage:updatedUser.profileImage}
+            }
+            return prevRecentChat
+          })
+
+          set({recentChats:updatedRecentChats})
         })
 
 

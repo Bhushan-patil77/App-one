@@ -133,7 +133,7 @@ io.on('connection', async (socket)=>{
           );
 
 
-          if(updatedMessage._id)
+          if(updatedMessage?._id)
             {
               socket.to(onlineUsersMap[updatedMessage.senderId]).emit('seenReport', updatedMessage)
             }
@@ -152,6 +152,13 @@ io.on('connection', async (socket)=>{
           {_id:messageId},
           {$set:{delivered:true, seen:true}}
         )
+    })
+
+    socket.on('profileUpdate', (updatedUser)=>{
+
+      updatedUser.recentChats.map((recentChat)=>{
+        socket.to(onlineUsersMap[recentChat._id]).emit('profileUpdate', updatedUser)
+      })
     })
  
    

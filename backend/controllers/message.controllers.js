@@ -1,9 +1,9 @@
 import cloudinary from "../lib/cloudinary.js";
 import { getReceiverSocketId, io, undeliveredMsgsQueue } from "../lib/socket.js"
 import Message from "../models/messageModel.js"
-import User from "../models/userModel.js"
+import User from "../models/userModel.js"   
 
-const uploadImagesToCloudinary = async (base64Images) => {
+const uploadImagesToCloudinary = async (base64Images,senderId, receiverId) => {
 
   try {
     const uploadPromises = base64Images.map((base64Image) => {
@@ -12,9 +12,10 @@ const uploadImagesToCloudinary = async (base64Images) => {
                                                                                                   if (error) {
                                                                                                     reject(error);
                                                                                                   } else {
+                                                                                                     
                                                                                                     resolve(result.secure_url); 
                                                                                                   }
-                                                                                                }
+                                                                                              }
         );
       });
     });
@@ -28,25 +29,142 @@ const uploadImagesToCloudinary = async (base64Images) => {
     throw error;
   }
 }; 
-
+   
 
 export const sendMessage = async (req, res) =>{
    const {senderId, receiverId, text, base64Images } = req.body
-   uploadImagesToCloudinary(base64Images)
-  .then(async (secureUrls) => {
+
+ 
+
+   if(base64Images.length > 0)  // sending images with text through socket io first and then saving msg to database so that images are delivered in no time
+   {
+    const receiverSocketId = getReceiverSocketId(receiverId)
+    base64Images.map((base64Image, index)=>{
+ 
+     const message1 = new Message({
+       senderId:senderId,
+       receiverId:receiverId,
+       text: index == base64Images.length -1 ? text : '',
+       images: base64Images[index],
+       delivered:false,
+       seen:false,
+       createdAt: new Date(),
+       updatedAt: new Date()
+      }) 
+
+      io.to(receiverSocketId).emit('newMessage', message1)
+ 
+    })
 
 
+    uploadImagesToCloudinary(base64Images, senderId, receiverId)
+    .then(async (secureUrls) => {
+  
+      const message2 = new Message({
+        senderId:senderId,
+        receiverId:receiverId,
+        text:text,
+        images:secureUrls
+       })  
+       
+       const savedMessage = await message2.save()
+  
+       
+       if(savedMessage?._id){
+  
+        const sender = await User.findById(senderId);
+        const receiver = await User.findById(receiverId);
+    
+        if (!sender || !receiver) {
+            return res.status(404).json({ error: "User not found" });
+          }
+    
+          const senderRecentChats = sender.recentChats || [];
+          const receiverRecentChats = receiver.recentChats || [];
+    
+          const existingReceiverIndex = senderRecentChats.findIndex((chat) =>{
+            return chat._id.toString() === receiverId.toString()
+          } 
+          ); 
+    
+          const existingSenderIndex = receiverRecentChats.findIndex((chat)=>{
+            return chat._id.toString() === senderId.toString()
+          })
+    
+          if(existingSenderIndex != -1){
+            receiver.recentChats.splice(existingSenderIndex, 1)
+          }
+    
+          if (existingReceiverIndex !== -1) {
+            sender.recentChats.splice(existingReceiverIndex, 1);
+          }
+    
+          receiverRecentChats.unshift({
+            _id: senderId,
+            name: sender.name, 
+            surname: sender.surname, 
+            lastMessage: text,
+            lastMessageTime: Date.now(),
+            lastSeen:sender.lastSeen,
+            profileImage:sender.profileImage
+          })
+    
+          senderRecentChats.unshift({
+            _id: receiverId,  
+            name: receiver.name,
+            surname: receiver.surname, 
+            lastMessage: text,
+            lastMessageTime: Date.now(),
+            lastSeen:receiver.lastSeen,
+            profileImage:receiver.profileImage
+          }) 
+    
+      
+          await User.findByIdAndUpdate(receiverId, { recentChats: receiverRecentChats });
+          await User.findByIdAndUpdate(senderId, { recentChats: senderRecentChats });
+    
+          const receiverSocketId = getReceiverSocketId(receiverId)
+    
+          if(receiverSocketId){
+            // io.to(receiverSocketId).emit('newMessage', message2)   
+            // here don't send message through socket io if images exist. we have sent them through socket io already one by one. only want to save 
+          }
+          else{
+            if (!undeliveredMsgsQueue[receiverId]) {
+              undeliveredMsgsQueue[receiverId] = [];
+          } 
+          undeliveredMsgsQueue[receiverId].push(savedMessage);
+    
+          }
+    
+         return res.status(200).json({success:'Message sent', savedMessage:savedMessage})
+  
+        }
+  
+       res.status(500).json({error:'Message sending failed'})
+  
+  
+    })
+    .catch((error) => {
+      res.status(500).json({error:'Could not upload images to cloudinary'})
+    });
 
-    const message = new Message({
+   }
+   else  // else if there is only text then sending text after saving the message to maintain consistency
+   {
+       
+    const message2 = new Message({
       senderId:senderId,
       receiverId:receiverId,
       text:text,
-      images:secureUrls
+      images:base64Images
      })  
      
-     const savedMessage = await message.save()
+     const savedMessage = await message2.save()
+
      
-     if(savedMessage._id){
+     if(savedMessage?._id){
+
       const sender = await User.findById(senderId);
       const receiver = await User.findById(receiverId);
   
@@ -76,8 +194,8 @@ export const sendMessage = async (req, res) =>{
   
         receiverRecentChats.unshift({
           _id: senderId,
-          name: sender.name, // Assuming 'name' is in the receiver document
-          surname: sender.surname, // Assuming 'surname' is in the receiver document
+          name: sender.name, 
+          surname: sender.surname, 
           lastMessage: text,
           lastMessageTime: Date.now(),
           lastSeen:sender.lastSeen,
@@ -101,7 +219,8 @@ export const sendMessage = async (req, res) =>{
         const receiverSocketId = getReceiverSocketId(receiverId)
   
         if(receiverSocketId){
-          io.to(receiverSocketId).emit('newMessage', message)
+          io.to(receiverSocketId).emit('newMessage', message2)
+          //here images are not present so we are sending message throu socket io after saving message to database
         }
         else{
           if (!undeliveredMsgsQueue[receiverId]) {
@@ -110,23 +229,208 @@ export const sendMessage = async (req, res) =>{
         undeliveredMsgsQueue[receiverId].push(savedMessage);
   
         }
-  
+   
        return res.status(200).json({success:'Message sent', savedMessage:savedMessage})
+
       }
 
      res.status(500).json({error:'Message sending failed'})
 
 
+   } 
+                                                                                                     
+
+
+  //  uploadImagesToCloudinary(base64Images, senderId, receiverId)
+  // .then(async (secureUrls) => {
+
+
+
+  //   const message2 = new Message({
+  //     senderId:senderId,
+  //     receiverId:receiverId,
+  //     text:text,
+  //     images:secureUrls
+  //    })  
+     
+  //    const savedMessage = await message2.save()
+
+     
+  //    if(savedMessage?._id){
+
+  //     const sender = await User.findById(senderId);
+  //     const receiver = await User.findById(receiverId);
+  
+  //     if (!sender || !receiver) {
+  //         return res.status(404).json({ error: "User not found" });
+  //       }
+  
+  //       const senderRecentChats = sender.recentChats || [];
+  //       const receiverRecentChats = receiver.recentChats || [];
+  
+  //       const existingReceiverIndex = senderRecentChats.findIndex((chat) =>{
+  //         return chat._id.toString() === receiverId.toString()
+  //       } 
+  //       ); 
+  
+  //       const existingSenderIndex = receiverRecentChats.findIndex((chat)=>{
+  //         return chat._id.toString() === senderId.toString()
+  //       })
+  
+  //       if(existingSenderIndex != -1){
+  //         receiver.recentChats.splice(existingSenderIndex, 1)
+  //       }
+  
+  //       if (existingReceiverIndex !== -1) {
+  //         sender.recentChats.splice(existingReceiverIndex, 1);
+  //       }
+  
+  //       receiverRecentChats.unshift({
+  //         _id: senderId,
+  //         name: sender.name, 
+  //         surname: sender.surname, 
+  //         lastMessage: text,
+  //         lastMessageTime: Date.now(),
+  //         lastSeen:sender.lastSeen,
+  //         profileImage:sender.profileImage
+  //       })
+  
+  //       senderRecentChats.unshift({
+  //         _id: receiverId,  
+  //         name: receiver.name,
+  //         surname: receiver.surname, 
+  //         lastMessage: text,
+  //         lastMessageTime: Date.now(),
+  //         lastSeen:receiver.lastSeen,
+  //         profileImage:receiver.profileImage
+  //       }) 
+  
+    
+  //       await User.findByIdAndUpdate(receiverId, { recentChats: receiverRecentChats });
+  //       await User.findByIdAndUpdate(senderId, { recentChats: senderRecentChats });
+  
+  //       const receiverSocketId = getReceiverSocketId(receiverId)
+  
+  //       if(receiverSocketId){
+  //         io.to(receiverSocketId).emit('newMessage', message2)
+  //       }
+  //       else{
+  //         if (!undeliveredMsgsQueue[receiverId]) {
+  //           undeliveredMsgsQueue[receiverId] = [];
+  //       } 
+  //       undeliveredMsgsQueue[receiverId].push(savedMessage);
+  
+  //       }
+  
+  //      return res.status(200).json({success:'Message sent', savedMessage:savedMessage})
+
+  //     }
+
+  //    res.status(500).json({error:'Message sending failed'})
+
+
+  // })
+  // .catch((error) => {
+  //   res.status(500).json({error:'Could not upload images to cloudinary'})
+  // });
+ 
+
+
+} 
+
+export const sendMessageWithUploadedImages = async (req, res) =>{
+  const {senderId, receiverId, text, imageUrls } = req.body
+  
+      
+   const message2 = new Message({
+     senderId:senderId,
+     receiverId:receiverId,
+     text:text,
+     images:imageUrls
+    })  
+    
+    const savedMessage = await message2.save()
 
     
-  })
-  .catch((error) => {
-    res.status(500).json({error:'Could not upload images to cloudinary'})
-  });
+    if(savedMessage?._id){
+
+     const sender = await User.findById(senderId);
+     const receiver = await User.findById(receiverId);
+ 
+     if (!sender || !receiver) {
+         return res.status(404).json({ error: "User not found" });
+       }
+ 
+       const senderRecentChats = sender.recentChats || [];
+       const receiverRecentChats = receiver.recentChats || [];
+ 
+       const existingReceiverIndex = senderRecentChats.findIndex((chat) =>{
+         return chat._id.toString() === receiverId.toString()
+       } 
+       ); 
+ 
+       const existingSenderIndex = receiverRecentChats.findIndex((chat)=>{
+         return chat._id.toString() === senderId.toString()
+       })
+ 
+       if(existingSenderIndex != -1){
+         receiver.recentChats.splice(existingSenderIndex, 1)
+       }
+ 
+       if (existingReceiverIndex !== -1) {
+         sender.recentChats.splice(existingReceiverIndex, 1);
+       }
+ 
+       receiverRecentChats.unshift({
+         _id: senderId,
+         name: sender.name, 
+         surname: sender.surname, 
+         lastMessage: text,
+         lastMessageTime: Date.now(),
+         lastSeen:sender.lastSeen,
+         profileImage:sender.profileImage
+       })
+ 
+       senderRecentChats.unshift({
+         _id: receiverId,  
+         name: receiver.name,
+         surname: receiver.surname, 
+         lastMessage: text,
+         lastMessageTime: Date.now(),
+         lastSeen:receiver.lastSeen,
+         profileImage:receiver.profileImage
+       }) 
+ 
+   
+       await User.findByIdAndUpdate(receiverId, { recentChats: receiverRecentChats });
+       await User.findByIdAndUpdate(senderId, { recentChats: senderRecentChats });
+ 
+       const receiverSocketId = getReceiverSocketId(receiverId)
+ 
+       if(receiverSocketId){
+         io.to(receiverSocketId).emit('newMessage', message2)
+         //here images are not present so we are sending message throu socket io after saving message to database
+       }
+       else{
+         if (!undeliveredMsgsQueue[receiverId]) {
+           undeliveredMsgsQueue[receiverId] = [];
+       } 
+       undeliveredMsgsQueue[receiverId].push(savedMessage);
+ 
+       }
+  
+      return res.status(200).json({success:'Message sent', savedMessage:savedMessage})
+
+     }
+
+    res.status(500).json({error:'Message sending failed'})
 
 
+  
+                                                                                                    
 
-}      
+
+} 
  
 export const getMessages = async(req, res) =>{
     const {loggedInUserId, selectedUserId } = req.body
