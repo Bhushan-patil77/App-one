@@ -51,6 +51,7 @@ const useMessageStore = create((set, get) => {
     sendMessage: (senderId, receiverId, text, base64Images) => {
       set({isSendingMessage:true})
       set({base64Images:[]})
+    
       try {
         if (senderId && receiverId && (text != '' || base64Images.length != 0) ) {
           fetch(`${VITE_BACKEND_URL}/messageRoutes/sendMessage`, {
@@ -89,6 +90,15 @@ const useMessageStore = create((set, get) => {
     sendMessageWithUploadedImages: (senderId, receiverId, text, imageUrls) => {
       set({isSendingMessage:true})
       const {setUploadedUrls} = useCloudinaryStore.getState()
+
+      const { messages } = get()
+      const msg = {
+        senderId:senderId,
+        receiverId:receiverId,
+        text:text,
+        images:imageUrls
+      }
+      set({ messages: [...messages, msg ] })
 
       try {
         if (senderId && receiverId && (text != '' || imageUrls.length != 0) ) {
