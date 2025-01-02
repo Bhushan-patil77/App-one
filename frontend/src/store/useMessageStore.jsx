@@ -319,6 +319,7 @@ const useMessageStore = create((set, get) => {
             }
             
             return msg
+            
           })
 
           set({messages:updatedMessages})
