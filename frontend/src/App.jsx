@@ -9,7 +9,7 @@ import { Route, Routes, useNavigate } from 'react-router-dom'
 import Login from './components/Login.jsx'
 import Signup from './components/Signup.jsx'
 import Profile from './components/Profile.jsx'
-import Home from './components/home.jsx'
+import Home from './components/h.jsx'
 
 
 function App() {
