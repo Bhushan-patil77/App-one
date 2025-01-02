@@ -290,8 +290,8 @@ const useMessageStore = create((set, get) => {
 
         socket.on('newMessage', (message) => {
          const {messages} = get()
-        //  const messageReceivedAudio = new Audio(messageReceivedSound);
-        //  messageReceivedAudio.play()
+         const messageReceivedAudio = new Audio(messageReceivedSound);
+         messageReceivedAudio.play()
 
        
           if (get().selectedUser && get().selectedUser._id == message.senderId) {
