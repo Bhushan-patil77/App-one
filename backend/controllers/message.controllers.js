@@ -350,8 +350,24 @@ export const sendMessageWithUploadedImages = async (req, res) =>{
      messageId:messageId
 
     })   
+
+    
     
     const savedMessage = await message2.save()
+
+
+    const receiverSocketId = getReceiverSocketId(receiverId)
+     
+    if(receiverSocketId){
+      io.to(receiverSocketId).emit('newMessage', savedMessage)
+    }
+    else{
+      if (!undeliveredMsgsQueue[receiverId]) {
+        undeliveredMsgsQueue[receiverId] = [];
+    } 
+    undeliveredMsgsQueue[receiverId].push(savedMessage);
+
+    }
   
     
     if(savedMessage?._id){ 
@@ -407,19 +423,18 @@ export const sendMessageWithUploadedImages = async (req, res) =>{
        await User.findByIdAndUpdate(receiverId, { recentChats: receiverRecentChats });
        await User.findByIdAndUpdate(senderId, { recentChats: senderRecentChats });
  
-       const receiverSocketId = getReceiverSocketId(receiverId)
+      //  const receiverSocketId = getReceiverSocketId(receiverId)
  
-       if(receiverSocketId){
-         io.to(receiverSocketId).emit('newMessage', message2)
-         //here images are not present so we are sending message throu socket io after saving message to database
-       }
-       else{
-         if (!undeliveredMsgsQueue[receiverId]) {
-           undeliveredMsgsQueue[receiverId] = [];
-       } 
-       undeliveredMsgsQueue[receiverId].push(savedMessage);
+      //  if(receiverSocketId){
+      //    io.to(receiverSocketId).emit('newMessage', message2)
+      //  }
+      //  else{
+      //    if (!undeliveredMsgsQueue[receiverId]) {
+      //      undeliveredMsgsQueue[receiverId] = [];
+      //  } 
+      //  undeliveredMsgsQueue[receiverId].push(savedMessage);
  
-       }
+      //  }
   
       return res.status(200).json({success:'Message sent', savedMessage:savedMessage})
 
