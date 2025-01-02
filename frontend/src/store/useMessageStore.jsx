@@ -24,6 +24,7 @@ const useMessageStore = create((set, get) => {
     getMessages: (loggedInUserId, selectedUserId) => {
       try {
 
+
         fetch(`${VITE_BACKEND_URL}/messageRoutes/getMessages`, {
           method: 'POST',
           credentials: 'include',
@@ -129,15 +130,15 @@ const useMessageStore = create((set, get) => {
               if (data.error) { return toast.error(data.error) }
               if (data.success) {
                 
-                const { messages } = get()
-                const updatedMessages = messages.map((message)=>{
-                  if(message.messageId === msg.messageId)
-                  {
-                    return {...message, _id:data.savedMessage._id, delivered:data.savedMessage.delivered, seen:data.savedMessage.seen}
-                  }
-                  return message
-                })
-                set({ messages: updatedMessages })
+                // const { messages } = get()
+                // const updatedMessages = messages.map((message)=>{
+                //   if(message.messageId === msg.messageId)
+                //   {
+                //     return {...message, _id:data.savedMessage._id, delivered:data.savedMessage.delivered, seen:data.savedMessage.seen}
+                //   }
+                //   return message
+                // })
+                // set({ messages: updatedMessages })
                 set({isSendingMessage:false})
                 setUploadedUrls([])
                 get().updateRecentChats(receiverId, text, imageUrls)
@@ -290,17 +291,16 @@ const useMessageStore = create((set, get) => {
 
         socket.on('newMessage', (message) => {
          const {messages} = get()
-         const messageReceivedAudio = new Audio(messageReceivedSound);
-         messageReceivedAudio.play()
+         
 
        
           if (get().selectedUser && get().selectedUser._id == message.senderId) {
             set({ messages: [...get().messages, message] })
-            socket.emit('deliveredAndSeen', message._id)
+            socket.emit('deliveredAndSeen', message)
           }
           else
           { 
-            socket.emit('delivered', message._id)
+            socket.emit('delivered', message)
           }
           get().updateRecentChats(message.senderId, message.text, message.images[0])
 
@@ -308,8 +308,20 @@ const useMessageStore = create((set, get) => {
           
         })
 
-        socket.on('getUndeliveredMsgs', (message)=>{
-          console.log('undelivered msg', message)
+        socket.on('getUndeliveredMsgs', (deliveredMessage)=>{
+          const {messages} = get()
+
+          const updatedMessages = messages.map((msg)=>{
+            if(msg.messageId == deliveredMessage.messageId)
+            {
+              
+              return {...deliveredMessage, delivered:true}
+            }
+            
+            return msg
+          })
+
+          set({messages:updatedMessages})
         })
 
 
@@ -330,15 +342,22 @@ const useMessageStore = create((set, get) => {
         })
 
         socket.on('deliveryReport', (deliveredMessage)=>{
+
+          console.log(deliveredMessage.messageId)
+          
           const {messages} = get()
 
           const updatedMessages = messages.map((msg)=>{
-            if(msg._id === deliveredMessage._id)
+            if(msg.messageId == deliveredMessage.messageId)
             {
-              return {...msg, delivered:true}
+              
+              return {...deliveredMessage, delivered:true}
             }
+            
             return msg
           })
+        
+           
           set({messages:updatedMessages})
         })
 

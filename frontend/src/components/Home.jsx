@@ -37,7 +37,6 @@ function Home() {
     if (scrollSpan) {
       scrollSpan.scrollIntoView({ behavior: 'smooth', block:'end' });
     }
-    console.log(messages)
   }, [messages])
 
   useEffect(() => {                                                                          // observing all unSeen messages elements to deliver seen report

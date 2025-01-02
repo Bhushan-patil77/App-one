@@ -44,14 +44,15 @@ io.on('connection', async (socket)=>{
     const updated = await User.findOneAndUpdate (
         {_id:_id},
         {$set:{lastSeen: 'online'}},
-        {new:true}
+        {new:true}  
     )  
 
    
 
     if (undeliveredMsgsQueue[_id]) {
         undeliveredMsgsQueue[_id].forEach((message) => {
-          socket.emit('getUndeliveredMsgs', message); 
+          console.log(message)
+          socket.emit('getUndeliveredMsgs', message);  
 
         });
 
@@ -104,29 +105,34 @@ io.on('connection', async (socket)=>{
 
     }) 
 
-    socket.on('delivered', async (deliveredMessageId) => { 
+    socket.on('delivered', async (deliveredMessage) => { 
+      socket.to(onlineUsersMap[deliveredMessage.senderId]).emit('deliveryReport', {...deliveredMessage, delivered:true})
         try {
-          const updatedMessage = await Message.findByIdAndUpdate(
-            { _id: deliveredMessageId },
+          const updatedMessage = await Message.findOneAndUpdate(
+            { _id: deliveredMessage._id },
             { $set: { delivered: true } },
             { new: true } 
-          );
+          );  
+
+          console.log('updated msg is ',updatedMessage)
            
-          if(updatedMessage._id)
+          if(updatedMessage?._id) 
           {
-            socket.to(onlineUsersMap[updatedMessage.senderId]).emit('deliveryReport', updatedMessage)
+            // socket.to(onlineUsersMap[updatedMessage.senderId]).emit('deliveryReport', updatedMessage)
           }
 
         } catch (error) {
           console.error('Error updating message:', error);
         }
-      });
+      }); 
  
-    socket.on('deliveredAndSeen', async(deliveredMessageId)=>{
+    socket.on('deliveredAndSeen', async(deliveredAndSeenMessage)=>{
+
+      socket.to(onlineUsersMap[deliveredAndSeenMessage.senderId]).emit('seenReport', deliveredAndSeenMessage.messageId)
         try {
 
           const updatedMessage = await Message.findByIdAndUpdate(
-            { _id: deliveredMessageId },
+            { _id: deliveredAndSeenMessage },
             { $set: { delivered:true, seen: true } },
             { new: true } 
             
@@ -135,7 +141,7 @@ io.on('connection', async (socket)=>{
 
           if(updatedMessage?._id)
             {
-              socket.to(onlineUsersMap[updatedMessage.senderId]).emit('seenReport', updatedMessage)
+              // socket.to(onlineUsersMap[updatedMessage.senderId]).emit('seenReport', updatedMessage)
             }
 
         } catch (error) {
@@ -144,6 +150,7 @@ io.on('connection', async (socket)=>{
     }) 
   
     socket.on('seen', async ({seenReportToId, messageId})=>{ 
+      console.log('seen msg id is', messageId)
       if(onlineUsersMap[seenReportToId])
       {
         socket.to(onlineUsersMap[seenReportToId]).emit('seen', messageId)

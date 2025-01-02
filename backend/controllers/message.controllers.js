@@ -30,7 +30,7 @@ const uploadImagesToCloudinary = async (base64Images,senderId, receiverId) => {
   }
 }; 
    
-
+ 
 export const sendMessage = async (req, res) =>{
    const {senderId, receiverId, text, base64Images } = req.body
 
@@ -347,11 +347,15 @@ export const sendMessageWithUploadedImages = async (req, res) =>{
      receiverId:receiverId,
      text:text,
      images:images, 
-     messageId:messageId
+     messageId:messageId,
+     delivered:false,
+     seen:false,
+     updatedAt: new Date(), 
+     createdAt: new Date()
 
     })   
 
-
+     
     
     const receiverSocketId = getReceiverSocketId(receiverId)
      
