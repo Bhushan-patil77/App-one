@@ -351,23 +351,26 @@ export const sendMessageWithUploadedImages = async (req, res) =>{
 
     })   
 
-    
-    
-    const savedMessage = await message2.save()
 
-
+    
     const receiverSocketId = getReceiverSocketId(receiverId)
      
     if(receiverSocketId){
-      io.to(receiverSocketId).emit('newMessage', savedMessage)
+      io.to(receiverSocketId).emit('newMessage', message2)
     }
     else{
       if (!undeliveredMsgsQueue[receiverId]) {
         undeliveredMsgsQueue[receiverId] = [];
     } 
-    undeliveredMsgsQueue[receiverId].push(savedMessage);
+    undeliveredMsgsQueue[receiverId].push(message2);
 
     }
+
+    
+    
+    const savedMessage = await message2.save()
+
+
   
     
     if(savedMessage?._id){ 
