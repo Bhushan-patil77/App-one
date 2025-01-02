@@ -11,7 +11,7 @@ import { io, server, app } from "./lib/socket.js";
 dotenv.config()
 
 app.use(cors({ 
-  origin: 'https://app-one-client-two.vercel.app/',
+  origin: 'https://app-one-client-two.vercel.app',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   credentials: true, // Allow credentials (cookies)
 })); 

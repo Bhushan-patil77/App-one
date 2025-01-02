@@ -7,7 +7,7 @@ import Message from '../models/messageModel.js'
 const app = express()
 const server = http.createServer(app)
 const io = new Server(server, {
-    cors:['https://app-one-client-two.vercel.app/']
+    cors:['https://app-one-client-two.vercel.app']
 }) 
 
 const onlineUsersMap = {}
