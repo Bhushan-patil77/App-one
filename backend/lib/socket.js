@@ -132,10 +132,10 @@ io.on('connection', async (socket)=>{
         try {
 
           const updatedMessage = await Message.findByIdAndUpdate(
-            { _id: deliveredAndSeenMessage },
+            { _id: deliveredAndSeenMessage._id },
             { $set: { delivered:true, seen: true } },
             { new: true } 
-            
+             
           );
 
 
