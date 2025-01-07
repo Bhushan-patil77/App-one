@@ -31,7 +31,7 @@ const bulkUpdateDeliveryInDatabase = async (messages) => {
   } catch (err) {
     console.error('Error during bulk update:', err);
   }
-}; 
+};  
 
 io.on('connection', async (socket)=>{
  
