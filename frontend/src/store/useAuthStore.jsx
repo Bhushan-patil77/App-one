@@ -101,7 +101,7 @@ const useAuthStore = create((set, get) => {
         }
        })
        .then((response)=>{return response.json()})
-       .then((data)=>{
+       .then((data)=>{ 
          
          if(data.error){toast.error(data.error)}
          if(data.success){
